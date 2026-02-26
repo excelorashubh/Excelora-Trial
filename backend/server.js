@@ -16,7 +16,10 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors());
+app.use(cors(
+  origin:"https://excelora-class.onrender.com/",
+  credentials:true
+));
 app.use(express.json());
 
 app.get('/', (req, res) => res.send('Excelora API running'));
