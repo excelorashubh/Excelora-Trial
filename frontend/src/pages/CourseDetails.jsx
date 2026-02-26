@@ -136,8 +136,8 @@ const CourseDetails = () => {
           {/* Footer Details*/}
           <div className='w-full flex flex-col items-center justify-center mt-10'>
             <div className='max-w-md flex gap-10 mb-8'>
-                <button className=' px-5 py-2 bg-indigo-600 rounded-xl' onClick={()=>navigate("/course-details")}>Views Course</button>
-                <button className=' px-5 py-2 bg-indigo-600 rounded-xl' onClick={downloadApp}>Download Apps</button>
+                <button className=' px-5 py-2 bg-indigo-600 text-white rounded-xl' onClick={()=>navigate("/course-details")}>Views Course</button>
+                <button className=' px-5 py-2 bg-indigo-600 text-white rounded-xl' onClick={downloadApp}>Download Apps</button>
             </div>
 
             <div className='flex w-175 mb-8 gap-10'>
