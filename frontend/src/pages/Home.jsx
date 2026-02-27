@@ -33,7 +33,7 @@ const Home = () => {
             {/* <BookOpen className="text-white w-6 h-6" /> */}
             <img src={logo} alt="" className="text-white w-6 h-6" />
           </div>
-          <span className="text-xl font-bold tracking-tight">EXCELORA CLASSES</span>
+          <span className="text-xl font-bold tracking-tight hidden md:block">EXCELORA CLASSES</span>
         </div>
         <div className="hidden md:flex gap-8 font-medium text-slate-600">
           <a href="/" className="hover:text-indigo-600 dark:text-white transition">Home</a>
