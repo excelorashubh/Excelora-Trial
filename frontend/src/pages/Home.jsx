@@ -63,7 +63,7 @@ const Home = () => {
             A centralized platform for Admins to build, Teachers to lead, and Students to succeed. Streamline your classroom management today.
           </p>
           <div className="flex flex-wrap gap-4">
-            <button className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition">
+            <button className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold dark:border-white dark:border-2 hover:bg-slate-800 transition">
               Explore Classes <ArrowRight size={20} />
             </button>
             <button className="flex items-center gap-2 px-8 py-4 bg-white dark:text-indigo-700 border border-slate-200 rounded-xl font-semibold hover:border-indigo-400 transition" onClick={()=>openDemo()}>
