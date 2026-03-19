@@ -5,30 +5,10 @@ import ClassList from '../components/ClassList'
 export default function StudentDashboard(){
   const { user, logout } = useAuth()
   return (
-    <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl">Student Dashboard</h1>
-        <div>
-          <span className="mr-4">{user?.name}</span>
-          <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={logout}>Logout</button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="p-4 bg-white rounded shadow">
-          <div className="mb-2">Payments</div>
-          <a href="/student/payment" className="inline-block bg-blue-600 text-white px-3 py-1 rounded text-sm">Pay Now</a>
-        </div>
-        <div className="p-4 bg-white rounded shadow">
-          <div className="mb-2">Payment History</div>
-          <a href="/student/payments" className="inline-block bg-gray-600 text-white px-3 py-1 rounded text-sm">View Details</a>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4">
-        <ClassList todayOnly title="Today's Classes" />
-        <ClassList title="All Classes" />
-      </div>
+    <div className='flex flex-col px-5 py-3 min-h-screen dark:bg-[#0f0f0f] dark:text-white'>
+      <h1 className='text-3xl font-bold mb-4'>Welcome, {user.fullName}!</h1>
+      <p className='text-lg mb-6'>Here are your assigned classrooms:</p>
+      <ClassList />
     </div>
   )
 }
