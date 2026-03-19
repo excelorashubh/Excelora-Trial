@@ -18,6 +18,9 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    include: ['react-hot-toast']
+  },
   build: {
     outDir: 'dist',
     sourcemap: false
