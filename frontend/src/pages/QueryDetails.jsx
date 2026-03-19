@@ -1,306 +1,176 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import logo from '../assets/logo.jpg'
-import { FaHome, FaUserCog, FaEdit, FaTrash } from "react-icons/fa";
-import { GiHamburgerMenu } from "react-icons/gi";
-import { useNavigate } from 'react-router-dom';
-import { RiSecurePaymentLine } from "react-icons/ri";
-import { SiGoogleclassroom } from "react-icons/si";
+import AdminLayout from '../components/AdminLayout'
+import { FaEdit, FaTrash } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
 import { getQueries, updateQuery, deleteQuery } from '../services/queryService'
-import { useToast } from '../context/ToastContext'
+import toast from 'react-hot-toast'
+import { X, Plus } from 'lucide-react'
 
+const inputCls = "w-full px-3 py-2 bg-[#0f172a] border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-sm"
 
-export default function QueryDetails(){
+export default function QueryDetails() {
   const navigate = useNavigate()
-  const { user, logout } = useAuth();
-  const { addToast } = useToast();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selectedItem, setSelectedItem] = useState("Query Details");
-  const [queries, setQueries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [editingQuery, setEditingQuery] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  const [queries, setQueries] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [editingQuery, setEditingQuery] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
   const fetchQueries = async () => {
+    setLoading(true)
     try {
-      setLoading(true);
-      const res = await getQueries({ page, limit });
-      const data = res.data || {};
-      setQueries(data.queries || []);
-      setTotal(data.total ?? 0);
-      setTotalPages(data.totalPages ?? 1);
+      const res = await getQueries({ page, limit })
+      const data = res.data || {}
+      setQueries(data.queries || [])
+      setTotal(data.total ?? 0)
+      setTotalPages(data.totalPages ?? 1)
     } catch (err) {
-      addToast('error', err.response?.data?.message || 'Failed to load queries');
-      setQueries([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      toast.error(err.response?.data?.message || 'Failed to load queries')
+      setQueries([])
+    } finally { setLoading(false) }
+  }
 
-  useEffect(() => {
-    fetchQueries();
-  }, [page, limit]);
-
-  const handleLimitChange = (e) => {
-    const newLimit = Number(e.target.value);
-    setLimit(newLimit);
-    setPage(1);
-  };
+  useEffect(() => { fetchQueries() }, [page, limit])
 
   const openEdit = (q) => {
-    setEditingQuery(q);
-    setEditForm({
-      studentName: q.studentName || '',
-      className: q.className || '',
-      board: q.board || '',
-      school: q.school || '',
-      requirement: q.requirement || '',
-      contactNumber: q.contactNumber || '',
-      location: q.location || '',
-      city: q.city || '',
-      leadsource: q.leadsource || '',
-    });
-  };
-
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
-  };
+    setEditingQuery(q)
+    setEditForm({ studentName: q.studentName || '', className: q.className || '', board: q.board || '', school: q.school || '', requirement: q.requirement || '', contactNumber: q.contactNumber || '', location: q.location || '', city: q.city || '', leadsource: q.leadsource || '' })
+  }
 
   const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    if (!editingQuery?._id) return;
-    setSaving(true);
+    e.preventDefault()
+    setSaving(true)
     try {
-      await updateQuery(editingQuery._id, editForm);
-      addToast('success', 'Query updated');
-      setEditingQuery(null);
-      fetchQueries();
-    } catch (err) {
-      addToast('error', err.response?.data?.message || 'Failed to update');
-    } finally {
-      setSaving(false);
-    }
-  };
+      await updateQuery(editingQuery._id, editForm)
+      toast.success('Query updated'); setEditingQuery(null); fetchQueries()
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to update') }
+    finally { setSaving(false) }
+  }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this enquiry?')) return;
-    setDeletingId(id);
-    try {
-      await deleteQuery(id);
-      addToast('success', 'Query deleted');
-      fetchQueries();
-    } catch (err) {
-      addToast('error', err.response?.data?.message || 'Failed to delete');
-    } finally {
-      setDeletingId(null);
-    }
-  };
+    if (!confirm('Delete this enquiry?')) return
+    setDeletingId(id)
+    try { await deleteQuery(id); toast.success('Deleted'); fetchQueries() }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed to delete') }
+    finally { setDeletingId(null) }
+  }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  const fmt = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
   return (
-    <div className="min-h-screen flex flex-col  relative ">
-
-     {/*Header Section */}
-    <div className='w-full h-18 px-4 py-2 flex items-center top-0 sticky backdrop-blur-md justify-between dark:bg-[#0f0f0f] z-50 dark:text-white'>
-      
-      {/*Brand Logo and Name*/}
-      <div className='flex items-center gap-4'>
-        <GiHamburgerMenu size={25} className='' onClick={()=>setSidebarOpen(prev=>!prev)}/>
-      <img src={logo} alt="" className='w-12 h-12 rounded-full'/>
-      <h2 className='text-2xl font-bold hidden md:block'>Excelora - Admin Dashboard</h2>
-      </div>
-
-      {/* Profile and Logout */}
-      <div>
-          <span className="mr-4">{user?.name}</span>
-          <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={logout}>Logout</button>
+    <AdminLayout title="Enquiries">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-slate-400">Per page:</label>
+          <select value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1) }}
+            className="px-3 py-1.5 bg-[#1e293b] border border-white/10 rounded-lg text-sm text-white focus:outline-none">
+            <option value={20}>20</option><option value={50}>50</option><option value={100}>100</option>
+          </select>
         </div>
-
-    </div>
-      
-
-    {/*Body section*/}
-    <div className='flex '>
-
-      {/*Aside Section*/}
-      <div className={`flex flex-col transition-all duration-300 border-r dark:bg-[#0f0f0f] dark:text-white fixed top-18 h-full z-40  ${sidebarOpen ? "w-60" : "w-20"} overflow-y-auto`}>
-
-{/* space-y-1 mt-3 */}
-      <nav className='space-y-1 mt-3'>
-      <SidebarItem icon={<FaHome/>} text={"Landing Page"} open={sidebarOpen} selected={selectedItem === "Landing Page"} onClick={()=>{setSelectedItem("Landing Page"); navigate("/admin")}}/>
-      <SidebarItem icon={<SiGoogleclassroom/>} text={"All Classes"} open={sidebarOpen} selected={selectedItem === "All Classes"} onClick={()=>{setSelectedItem("All Classes"); navigate("/admin/all-classes")}}/>
-      <SidebarItem icon={<FaUserCog/>} text={"Manage Users"} open={sidebarOpen} selected={selectedItem === "Manage Users"} onClick={()=>{setSelectedItem("Manage Users"); navigate("/admin/users")}}/>
-      <SidebarItem icon={<SiGoogleclassroom/>} text={"Create Classes"} open={sidebarOpen} selected={selectedItem === "Create Classes"} onClick={()=>{setSelectedItem("Create Classes"); navigate("/admin/create-class")}}/>
-      <SidebarItem icon={<RiSecurePaymentLine/>} text={"Payment Details"} open={sidebarOpen} selected={selectedItem === "Payment Details"} onClick={()=>{setSelectedItem("Payment Details"); navigate("/admin/payments")}}/>
-      <SidebarItem icon={<RiSecurePaymentLine/>} text={"Query Details"} open={sidebarOpen} selected={selectedItem === "Query Details"} onClick={()=>{setSelectedItem("Query Details"); navigate("/admin/query-details")}}/>
-      {/* <SidebarItem icon={<RiSecurePaymentLine/>} text={"Query Form"} open={sidebarOpen} selected={selectedItem === "Query Form"} onClick={()=>{setSelectedItem("Query Form"); navigate("/admin/query-form")}}/> */}
-      </nav>
+        <button onClick={() => navigate('/admin/query-form')}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-lg transition-colors">
+          <Plus size={15} /> Add Enquiry
+        </button>
       </div>
 
+      {/* Table */}
+      <div className="bg-[#1e293b] rounded-xl border border-white/5 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-slate-500 animate-pulse">Loading enquiries...</div>
+        ) : queries.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">No enquiries yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5 text-xs text-slate-500 uppercase tracking-wide">
+                  {['Student', 'Class', 'Board', 'Contact', 'City', 'Lead Source', 'Date', 'Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {queries.map(q => (
+                  <tr key={q._id} className="hover:bg-white/[0.02]">
+                    <td className="px-4 py-3 text-white font-medium">{q.studentName}</td>
+                    <td className="px-4 py-3 text-slate-300">{q.className}</td>
+                    <td className="px-4 py-3 text-slate-300">{q.board}</td>
+                    <td className="px-4 py-3 text-slate-300">{q.contactNumber}</td>
+                    <td className="px-4 py-3 text-slate-300">{q.city}</td>
+                    <td className="px-4 py-3 text-slate-400">{q.leadsource || '—'}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">{fmt(q.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => openEdit(q)} className="p-1.5 text-blue-400 hover:bg-blue-500/20 rounded transition-colors"><FaEdit /></button>
+                        <button onClick={() => handleDelete(q._id)} disabled={deletingId === q._id} className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50"><FaTrash /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-            {/* Main Content Section */}
+      {/* Pagination */}
+      {!loading && queries.length > 0 && (
+        <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
+          <p className="text-sm text-slate-500">Showing {total === 0 ? 0 : (page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}</p>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+              className="px-3 py-1 bg-[#1e293b] border border-white/10 rounded text-sm text-slate-300 disabled:opacity-40 hover:bg-white/5">Previous</button>
+            <span className="text-sm text-slate-400">Page {page} of {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+              className="px-3 py-1 bg-[#1e293b] border border-white/10 rounded text-sm text-slate-300 disabled:opacity-40 hover:bg-white/5">Next</button>
+          </div>
+        </div>
+      )}
 
-            <div className={`w-full px-5 py-10 flex flex-col dark:bg-[#0f0f0f] dark:text-white ${sidebarOpen ? "md:ml-60" : "md:ml-20"}`}>
-              <div className='flex items-center justify-between px-5 mb-6 flex-wrap gap-4'>
-                <h2 className='text-xl font-bold'>Query List</h2>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-sm">
-                    <span>Per page:</span>
-                    <select
-                      value={limit}
-                      onChange={handleLimitChange}
-                      className="border dark:bg-gray-800 dark:border-gray-600 rounded px-2 py-1 text-sm"
-                    >
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                    </select>
-                  </label>
-                  <button className='px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg' onClick={()=>navigate("/admin/query-form")}>Add Query</button>
-                </div>
+      {/* Edit Modal */}
+      {editingQuery && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !saving && setEditingQuery(null)}>
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-white">Edit Enquiry</h3>
+                <button onClick={() => setEditingQuery(null)} className="text-slate-500 hover:text-white"><X size={18} /></button>
               </div>
-
-              {loading ? (
-                <div className="px-5 text-center py-8">Loading queries...</div>
-              ) : queries.length === 0 ? (
-                <div className="px-5 text-center py-8 text-gray-500 dark:text-gray-400">No enquiries yet. Click &quot;Add Query&quot; to create one.</div>
-              ) : (
-                <>
-                  <div className="px-5 overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                      <thead>
-                        <tr className="bg-gray-100 dark:bg-gray-800">
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">Student</th>
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">Class</th>
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">Board</th>
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">Contact</th>
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">City</th>
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">Lead Source</th>
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">Date</th>
-                          <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-semibold">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {queries.map((q) => (
-                          <tr key={q._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">{q.studentName}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">{q.className}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">{q.board}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">{q.contactNumber}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">{q.city}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">{q.leadsource || '—'}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">{formatDate(q.createdAt)}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <button type="button" onClick={() => openEdit(q)} className="p-1.5 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded" title="Edit"><FaEdit /></button>
-                                <button type="button" onClick={() => handleDelete(q._id)} disabled={deletingId === q._id} className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded disabled:opacity-50" title="Delete"><FaTrash /></button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="px-5 mt-4 flex items-center justify-between flex-wrap gap-2">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Showing {total === 0 ? 0 : (page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 border dark:border-gray-600 rounded disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-800">Previous</button>
-                      <span className="text-sm">Page {page} of {totalPages}</span>
-                      <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 border dark:border-gray-600 rounded disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-800">Next</button>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Edit Modal */}
-              {editingQuery && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !saving && setEditingQuery(null)}>
-                  <div className="bg-white dark:bg-gray-900 dark:text-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                    <div className="p-6">
-                      <h3 className="text-lg font-bold mb-4">Edit Enquiry</h3>
-                      <form onSubmit={handleSaveEdit} className="grid grid-cols-1 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium mb-0.5">Student Name</label>
-                          <input type="text" name="studentName" value={editForm.studentName} onChange={handleEditChange} required className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium mb-0.5">Class</label>
-                            <input type="text" name="className" value={editForm.className} onChange={handleEditChange} required className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-0.5">Board</label>
-                            <select name="board" value={editForm.board} onChange={handleEditChange} required className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm">
-                              <option value="CBSE">CBSE</option>
-                              <option value="ICSE">ICSE</option>
-                              <option value="State Board">State Board</option>
-                              <option value="Other">Other</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-0.5">School</label>
-                          <input type="text" name="school" value={editForm.school} onChange={handleEditChange} className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-0.5">Requirement</label>
-                          <textarea name="requirement" value={editForm.requirement} onChange={handleEditChange} rows={2} className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium mb-0.5">Contact Number</label>
-                            <input type="tel" name="contactNumber" value={editForm.contactNumber} onChange={handleEditChange} required className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-0.5">Location</label>
-                            <input type="text" name="location" value={editForm.location} onChange={handleEditChange} className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium mb-0.5">City</label>
-                            <input type="text" name="city" value={editForm.city} onChange={handleEditChange} required className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-0.5">Lead Source</label>
-                            <input type="text" name="leadsource" value={editForm.leadsource} onChange={handleEditChange} className="w-full border dark:bg-gray-800 dark:border-gray-600 rounded px-3 py-2 text-sm" />
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <button type="submit" disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60">{saving ? 'Saving...' : 'Save'}</button>
-                          <button type="button" onClick={() => setEditingQuery(null)} disabled={saving} className="px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">Cancel</button>
-                        </div>
-                      </form>
-                    </div>
+              <form onSubmit={handleSaveEdit} className="space-y-3">
+                <div><label className="block text-xs text-slate-400 mb-1">Student Name</label><input name="studentName" value={editForm.studentName} onChange={e => setEditForm(p => ({ ...p, studentName: e.target.value }))} required className={inputCls} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs text-slate-400 mb-1">Class</label><input name="className" value={editForm.className} onChange={e => setEditForm(p => ({ ...p, className: e.target.value }))} required className={inputCls} /></div>
+                  <div><label className="block text-xs text-slate-400 mb-1">Board</label>
+                    <select name="board" value={editForm.board} onChange={e => setEditForm(p => ({ ...p, board: e.target.value }))} className={inputCls}>
+                      {['CBSE', 'ICSE', 'State Board', 'Other'].map(b => <option key={b}>{b}</option>)}
+                    </select>
                   </div>
                 </div>
-              )}
+                <div><label className="block text-xs text-slate-400 mb-1">School</label><input value={editForm.school} onChange={e => setEditForm(p => ({ ...p, school: e.target.value }))} className={inputCls} /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Requirement</label><textarea value={editForm.requirement} onChange={e => setEditForm(p => ({ ...p, requirement: e.target.value }))} rows={2} className={inputCls} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs text-slate-400 mb-1">Contact</label><input value={editForm.contactNumber} onChange={e => setEditForm(p => ({ ...p, contactNumber: e.target.value }))} required className={inputCls} /></div>
+                  <div><label className="block text-xs text-slate-400 mb-1">Location</label><input value={editForm.location} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} className={inputCls} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs text-slate-400 mb-1">City</label><input value={editForm.city} onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))} required className={inputCls} /></div>
+                  <div><label className="block text-xs text-slate-400 mb-1">Lead Source</label><input value={editForm.leadsource} onChange={e => setEditForm(p => ({ ...p, leadsource: e.target.value }))} className={inputCls} /></div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" disabled={saving} className="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-lg disabled:opacity-60">{saving ? 'Saving...' : 'Save'}</button>
+                  <button type="button" onClick={() => setEditingQuery(null)} className="px-4 py-2 border border-white/10 text-slate-400 hover:text-white text-sm rounded-lg">Cancel</button>
+                </div>
+              </form>
             </div>
           </div>
-    </div>
-  )
-}
-
-function SidebarItem({icon, text, open, selected, onClick}){
-  return(
-    <button className={`flex items-center gap-4 p-2 rounded w-full transition-colors 
-    ${open ? "justify-start" : "justify-center"} ${selected ? "bg-[#272727] text-white" : "hover:bg-[#272727] hover:text-white"}`} onClick={onClick}> 
-    <span className='text-lg'>{icon}</span>
-    {open && <span className='text-sm '>{text}</span>}
-    </button>
+        </div>
+      )}
+    </AdminLayout>
   )
 }

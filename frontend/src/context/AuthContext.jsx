@@ -40,6 +40,15 @@ export const AuthProvider = ({ children }) => {
     return u
   }
 
+  // Refresh full user profile from backend (includes all new fields)
+  const refreshUser = async () => {
+    try {
+      const res = await api.get('/auth/me')
+      setUser(res.data)
+      return res.data
+    } catch { return null }
+  }
+
   const logout = () => {
     delete api.defaults.headers.common['Authorization']
     setUser(null)
@@ -49,7 +58,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, token }}>
+    <AuthContext.Provider value={{ user, login, register, logout, token, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   )

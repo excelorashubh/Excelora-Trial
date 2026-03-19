@@ -1,184 +1,106 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import AdminLayout from '../components/AdminLayout'
 import { getClass, updateClass } from '../services/classService'
-import { useToast } from '../context/ToastContext'
+import toast from 'react-hot-toast'
+
+const inputCls = "w-full px-3 py-2.5 bg-[#1e293b] border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-sm"
+const labelCls = "block text-xs font-medium text-slate-400 mb-1"
 
 export default function EditClass() {
   const { classId } = useParams()
   const navigate = useNavigate()
   const [form, setForm] = useState({ title: '', subject: '', teacherName: '', studentNames: '', classDate: '', classTime: '', meetingLink: '' })
   const [loading, setLoading] = useState(true)
-  const { addToast } = useToast()
+  const [saving, setSaving] = useState(false)
+  const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
 
   useEffect(() => {
-    fetchClass()
-  }, [classId])
-
-  const fetchClass = async () => {
-    try {
-      const data = await getClass(classId)
-      const classData = data.data || data
+    getClass(classId).then(res => {
+      const d = res.data || res
       setForm({
-        title: classData.title || '',
-        subject: classData.subject || '',
-        teacherName: classData.teacher?.name || '',
-        studentNames: Array.isArray(classData.students)
-          ? classData.students.map(s => s.name).join(', ')
-          : '',
-        classDate: classData.classDate || '',
-        classTime: classData.classTime || '',
-        meetingLink: classData.meetingLink || ''
+        title: d.title || '', subject: d.subject || '',
+        teacherName: d.teacher?.name || '',
+        studentNames: Array.isArray(d.students) ? d.students.map(s => s.name).join(', ') : '',
+        classDate: d.classDate || '', classTime: d.classTime || '',
+        meetingLink: d.meetingLink || ''
       })
-    } catch (err) {
-      addToast('error', 'Failed to fetch class details')
-      setTimeout(() => navigate('/admin'), 2000)
-    } finally {
-      setLoading(false)
-    }
-  }
+    }).catch(() => {
+      toast.error('Failed to load class')
+      navigate('/admin/all-classes')
+    }).finally(() => setLoading(false))
+  }, [classId])
 
   const submit = async (e) => {
     e.preventDefault()
-
-    if (!form.title || !form.subject) {
-      addToast('error', 'Title and subject are required')
-      return
-    }
-    if (!form.classDate) {
-      addToast('error', 'Class date is required')
-      return
-    }
-    if (!form.classTime) {
-      addToast('error', 'Class time is required')
-      return
-    }
-
-    const payload = {
-      ...form,
-      studentNames: form.studentNames
-        ? form.studentNames.split(',').map(s => s.trim()).filter(Boolean)
-        : []
-    }
-
+    if (!form.title || !form.subject) return toast.error('Title and subject are required')
+    if (!form.classDate) return toast.error('Class date is required')
+    if (!form.classTime) return toast.error('Class time is required')
+    setSaving(true)
     try {
-      await updateClass(classId, payload)
-      addToast('success', 'Class updated successfully')
-      setTimeout(() => navigate('/admin'), 1500)
+      await updateClass(classId, {
+        ...form,
+        studentNames: form.studentNames ? form.studentNames.split(',').map(s => s.trim()).filter(Boolean) : []
+      })
+      toast.success('Class updated')
+      navigate('/admin/all-classes')
     } catch (err) {
       const data = err?.response?.data
-      const msg = data?.errors ? data.errors.map(e => e.msg).join(', ') : 'Error updating class'
-      addToast('error', msg)
-    }
+      toast.error(data?.errors ? data.errors.map(e => e.msg).join(', ') : 'Error updating class')
+    } finally { setSaving(false) }
   }
 
-  if (loading) {
-    return (
-      <div className="container py-8">
-        <div className="animate-pulse">Loading class details...</div>
-      </div>
-    )
-  }
+  if (loading) return <AdminLayout title="Edit Class"><div className="text-slate-400 animate-pulse">Loading...</div></AdminLayout>
 
   return (
-    <div className="container py-8">
-      <div className="mb-4">
-        <button 
-          onClick={() => navigate('/admin')} 
-          className="text-blue-600 hover:text-blue-800"
-        >
-          ← Back to Dashboard
-        </button>
+    <AdminLayout title="Edit Class">
+      <div className="max-w-2xl">
+        <div className="bg-[#1e293b] rounded-xl border border-white/5 p-6">
+          <h2 className="text-base font-semibold mb-5 text-white">Edit Class Details</h2>
+          <form onSubmit={submit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Title *</label>
+                <input className={inputCls} value={form.title} onChange={set('title')} />
+              </div>
+              <div>
+                <label className={labelCls}>Subject *</label>
+                <input className={inputCls} value={form.subject} onChange={set('subject')} />
+              </div>
+              <div>
+                <label className={labelCls}>Teacher Name</label>
+                <input className={inputCls} value={form.teacherName} onChange={set('teacherName')} />
+              </div>
+              <div>
+                <label className={labelCls}>Student Names (comma separated)</label>
+                <input className={inputCls} value={form.studentNames} onChange={set('studentNames')} />
+              </div>
+              <div>
+                <label className={labelCls}>Class Date *</label>
+                <input type="date" className={inputCls} value={form.classDate} onChange={set('classDate')} />
+              </div>
+              <div>
+                <label className={labelCls}>Class Time *</label>
+                <input type="time" className={inputCls} value={form.classTime} onChange={set('classTime')} />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Meeting Link</label>
+              <input className={inputCls} value={form.meetingLink} onChange={set('meetingLink')} />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" disabled={saving}
+                className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-60">
+                {saving ? 'Saving...' : 'Update Class'}
+              </button>
+              <button type="button" onClick={() => navigate('/admin/all-classes')}
+                className="px-5 py-2.5 border border-white/10 text-slate-400 hover:text-white text-sm rounded-lg transition-colors">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-      <h2 className="text-xl mb-4">Edit Class</h2>
-      <form onSubmit={submit} className="bg-white p-4 rounded shadow max-w-lg">
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Title *</label>
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="Class Title"
-            value={form.title}
-            onChange={e => setForm({ ...form, title: e.target.value })}
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Subject *</label>
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="Subject"
-            value={form.subject}
-            onChange={e => setForm({ ...form, subject: e.target.value })}
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Teacher Name</label>
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="Teacher Name"
-            value={form.teacherName}
-            onChange={e => setForm({ ...form, teacherName: e.target.value })}
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Student Names (comma separated)</label>
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="Alice,Bob,Charlie"
-            value={form.studentNames}
-            onChange={e => setForm({ ...form, studentNames: e.target.value })}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Class Date *</label>
-            <input
-              type="date"
-              className="w-full border p-2 rounded"
-              value={form.classDate}
-              onChange={e => setForm({ ...form, classDate: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Class Time *</label>
-            <input
-              type="time"
-              className="w-full border p-2 rounded"
-              value={form.classTime}
-              onChange={e => setForm({ ...form, classTime: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Meeting Link</label>
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="https://zoom.us/j/..."
-            value={form.meetingLink}
-            onChange={e => setForm({ ...form, meetingLink: e.target.value })}
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <button 
-            type="submit"
-            className="bg-green-600 hover:bg-green-700 text-white p-2 rounded"
-          >
-            Update Class
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/admin')}
-            className="bg-gray-400 hover:bg-gray-500 text-white p-2 rounded"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
+    </AdminLayout>
   )
 }
-

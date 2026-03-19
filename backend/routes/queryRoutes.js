@@ -6,9 +6,10 @@ const { permit } = require('../middleware/roleMiddleware');
 
 router.use(protect);
 
-router.post('/', permit('admin'), createQuery);
-router.get('/', permit('admin'), getQueries);
-router.put('/:id', permit('admin'), updateQuery);
+// Salesman and staff can create/view/update queries; only admin can delete
+router.post('/', permit('admin', 'salesman', 'staff'), createQuery);
+router.get('/', permit('admin', 'salesman', 'staff'), getQueries);
+router.put('/:id', permit('admin', 'salesman', 'staff'), updateQuery);
 router.delete('/:id', permit('admin'), deleteQuery);
 
 module.exports = router;

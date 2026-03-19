@@ -99,84 +99,64 @@ export default function ClassList({ todayOnly = false, title = 'Class List' }) {
 
   if (loading) {
     return (
-      <div className="p-4 bg-white rounded shadow">
-        <div className="animate-pulse">Loading classes...</div>
+      <div className="p-6 bg-[#1e293b] rounded-xl border border-white/5 animate-pulse text-slate-500">
+        Loading classes...
       </div>
     )
   }
 
-  const openMeet = (meetLink) => {
-    window.open(`https://${meetLink}`, "_blank", "noopener,noreferrer");
-    
-  };
-
   return (
-    <div className="p-4 bg-white rounded shadow">
-      <h3 className="text-lg font-semibold mb-4">{title}</h3>
+    <div className="bg-[#1e293b] rounded-xl border border-white/5 overflow-hidden">
+      <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        {isAdmin && (
+          <button onClick={() => navigate('/admin/create-class')}
+            className="text-xs text-primary-400 hover:text-primary-300 transition-colors">+ New Class</button>
+        )}
+      </div>
       {classes.length === 0 ? (
-        <div className="text-gray-500 py-4">
+        <div className="px-5 py-8 text-center text-slate-500 text-sm">
           {todayOnly ? 'No classes scheduled for today' : 'No classes available'}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left">Title</th>
-                <th className="px-4 py-2 text-left">Subject</th>
-                <th className="px-4 py-2 text-left">Teacher</th>
-                <th className="px-4 py-2 text-left">Students</th>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Time</th>
-                <th className="px-4 py-2 text-left">Class Link</th>
-                {isAdmin && <th className="px-4 py-2 text-left">Actions</th>}
+            <thead>
+              <tr className="border-b border-white/5 text-xs text-slate-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-left">Title</th>
+                <th className="px-4 py-3 text-left">Subject</th>
+                <th className="px-4 py-3 text-left">Teacher</th>
+                <th className="px-4 py-3 text-left">Students</th>
+                <th className="px-4 py-3 text-left">Date</th>
+                <th className="px-4 py-3 text-left">Time</th>
+                <th className="px-4 py-3 text-left">Link</th>
+                {isAdmin && <th className="px-4 py-3 text-left">Actions</th>}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/5">
               {classes.map((cls) => (
-                <tr key={cls._id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2 font-medium">{cls.title}</td>
-                  <td className="px-4 py-2">{cls.subject}</td>
-                  <td className="px-4 py-2">{cls.teacher?.name || 'N/A'}</td>
-                  <td className="px-4 py-2">{cls.students?.length || 0}</td>
-                  <td className="px-4 py-2 text-sm">
-                    {getClassDateYmd(cls) || 'N/A'}
-                  </td>
-                  
-                  <td className="px-4 py-2 text-sm">
-                    {getClassTimeHm(cls) || 'N/A'}
-                  </td>
-                  <td className="px-4 py-2">
+                <tr key={cls._id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-3 font-medium text-white">{cls.title}</td>
+                  <td className="px-4 py-3 text-slate-300">{cls.subject}</td>
+                  <td className="px-4 py-3 text-slate-300">{cls.teacher?.name || '—'}</td>
+                  <td className="px-4 py-3 text-slate-400">{cls.students?.length || 0}</td>
+                  <td className="px-4 py-3 text-slate-400 text-xs">{getClassDateYmd(cls) || '—'}</td>
+                  <td className="px-4 py-3 text-slate-400 text-xs">{getClassTimeHm(cls) || '—'}</td>
+                  <td className="px-4 py-3">
                     {cls.meetingLink ? (
-                      <a
-                        href={cls.meetingLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline break-all" onClick={()=>{
-                          openMeet(cls.meetingLink)
-                        }}
-                      >
-                        Open Class
+                      <a href={cls.meetingLink} target="_blank" rel="noopener noreferrer"
+                        className="text-primary-400 hover:text-primary-300 text-xs transition-colors">
+                        Join
                       </a>
-                    ) : (
-                      'N/A'
-                    )}
+                    ) : <span className="text-slate-600 text-xs">—</span>}
                   </td>
                   {isAdmin && (
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(cls._id)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(cls._id, cls.title)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => handleEdit(cls._id)}
+                          className="px-2.5 py-1 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 rounded text-xs transition-colors">Edit</button>
+                        <button onClick={() => handleDelete(cls._id, cls.title)}
+                          className="px-2.5 py-1 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded text-xs transition-colors">Delete</button>
                       </div>
                     </td>
                   )}

@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (user) => {
@@ -8,33 +7,42 @@ const generateToken = (user) => {
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone, school } = req.body;
     if (!name || !email || !password) return res.status(400).json({ message: 'Missing fields' });
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ message: 'Email already in use' });
-    const salt = await bcrypt.genSalt(10);
-    const hashed = await bcrypt.hash(password, salt);
-    const user = await User.create({ name, email, password: hashed, role: role || 'student' });
+    // Model pre-save hook handles password hashing
+    const user = await User.create({ name, email, password, role: role || 'student', phone, school });
     const token = generateToken(user);
-    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.status(201).json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, status: user.status }
+    });
   } catch (err) { next(err); }
 };
 
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    // Must select password since it's select:false in schema
+    const user = await User.findOne({ email }).select('+password');
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-    const matched = await bcrypt.compare(password, user.password);
+    const matched = await user.matchPassword(password);
     if (!matched) return res.status(400).json({ message: 'Invalid credentials' });
     const token = generateToken(user);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, status: user.status }
+    });
   } catch (err) { next(err); }
 };
 
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id)
+      .select('-password')
+      .populate('assignedTeacher', 'name email subject')
+      .populate('assignedStudents', 'name email class');
     res.json(user);
   } catch (err) { next(err); }
 };

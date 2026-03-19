@@ -23,6 +23,14 @@ import AllClasses from './pages/AllClasses'
 import QueryDetails from './pages/QueryDetails'
 import QueryForm from './pages/QueryForm'
 
+const ROLE_HOME = {
+  admin: '/admin',
+  teacher: '/teacher',
+  student: '/student',
+  staff: '/admin',
+  salesman: '/admin/query-details',
+}
+
 const Protected = ({ children, roles }) => {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
@@ -32,48 +40,37 @@ const Protected = ({ children, roles }) => {
 
 export default function App() {
   return (
-
     <>
-    <ToastContainer />
-    <Routes>
-      <Route path='/' element={<Home />} />
-      <Route path='/registration' element={<Registration />} />
-      <Route path="/lo" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/course-details" element={<CourseDetails />} />
-      <Route path='/aboutus' element={<AboutUs />} />
+      <ToastContainer />
+      <Routes>
+        <Route path='/' element={<Home />} />
+        <Route path='/registration' element={<Registration />} />
+        <Route path="/lo" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/course-details" element={<CourseDetails />} />
+        <Route path='/aboutus' element={<AboutUs />} />
 
-      <Route
-        path="/admin"
-        element={<Protected roles={["admin"]}><AdminDashboard /></Protected>}
-      />
-      <Route path="/admin/users" element={<Protected roles={["admin"]}><AdminUsers/></Protected>} />
-      <Route path="/admin/create-class" element={<Protected roles={["admin"]}><CreateClass/></Protected>} />
-      <Route path="/admin/edit-class/:classId" element={<Protected roles={["admin"]}><EditClass/></Protected>} />
-      <Route path="/admin/payments" element={<Protected roles={["admin"]}><AdminPayments/></Protected>} />
-      <Route path="/admin/all-classes" element={<Protected roles={["admin"]}><AllClasses/></Protected>} />
-      <Route path="/admin/query-details" element={<Protected roles={["admin"]}><QueryDetails/></Protected>} />
-      <Route path="/admin/query-form" element={<Protected roles={["admin"]}><QueryForm/></Protected>} />
+        {/* Admin & Staff routes */}
+        <Route path="/admin" element={<Protected roles={['admin', 'staff']}><AdminDashboard /></Protected>} />
+        <Route path="/admin/users" element={<Protected roles={['admin']}><AdminUsers /></Protected>} />
+        <Route path="/admin/create-class" element={<Protected roles={['admin', 'staff']}><CreateClass /></Protected>} />
+        <Route path="/admin/edit-class/:classId" element={<Protected roles={['admin', 'staff', 'teacher']}><EditClass /></Protected>} />
+        <Route path="/admin/payments" element={<Protected roles={['admin']}><AdminPayments /></Protected>} />
+        <Route path="/admin/all-classes" element={<Protected roles={['admin', 'staff']}><AllClasses /></Protected>} />
+        <Route path="/admin/query-details" element={<Protected roles={['admin', 'salesman', 'staff']}><QueryDetails /></Protected>} />
+        <Route path="/admin/query-form" element={<Protected roles={['admin', 'salesman', 'staff']}><QueryForm /></Protected>} />
 
-      {/* QueryDetails */}
-      <Route
-        path="/teacher"
-        element={<Protected roles={["teacher"]}><TeacherDashboard /></Protected>}
-      />
-      <Route path="/teacher/materials" element={<Protected roles={["teacher"]}><TeacherMaterials/></Protected>} />
-      <Route path="/teacher/attendance" element={<Protected roles={["teacher"]}><AttendancePage/></Protected>} />
+        {/* Teacher routes */}
+        <Route path="/teacher" element={<Protected roles={['teacher']}><TeacherDashboard /></Protected>} />
+        <Route path="/teacher/materials" element={<Protected roles={['teacher']}><TeacherMaterials /></Protected>} />
+        <Route path="/teacher/attendance" element={<Protected roles={['teacher', 'admin', 'staff']}><AttendancePage /></Protected>} />
 
-      <Route
-        path="/student"
-        element={<Protected roles={["student"]}><StudentDashboard /></Protected>}
-      />
-      <Route
-        path="/student/payment"
-        element={<Protected roles={["student"]}><PaymentPage /></Protected>}
-      />
-      <Route path="/student/payments" element={<Protected roles={["student"]}><StudentPayments/></Protected>} />
-    </Routes>
+        {/* Student routes */}
+        <Route path="/student" element={<Protected roles={['student']}><StudentDashboard /></Protected>} />
+        <Route path="/student/payment" element={<Protected roles={['student']}><PaymentPage /></Protected>} />
+        <Route path="/student/payments" element={<Protected roles={['student']}><StudentPayments /></Protected>} />
+      </Routes>
     </>
   )
 }

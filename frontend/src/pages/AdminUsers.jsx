@@ -1,258 +1,230 @@
 import React, { useEffect, useState } from 'react'
-import api from '../services/api'
-import { useToast } from '../context/ToastContext'
-import logo from '../assets/logo.jpg'
-import { GiHamburgerMenu } from "react-icons/gi";
-import { useAuth } from '../context/AuthContext';
-import { FaUserCircle, FaHome, FaUserCog } from "react-icons/fa";
-import { SiGoogleclassroom } from "react-icons/si";
-import { RiSecurePaymentLine } from "react-icons/ri";
-import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout'
+import { getUsers, createUser, updateUser, deleteUser } from '../services/userService'
+import toast from 'react-hot-toast'
+import { Search, Plus, X } from 'lucide-react'
 
-export default function AdminUsers(){
+const ROLES = ['student', 'teacher', 'admin', 'staff', 'salesman', 'user']
+const EMPTY = { name: '', email: '', password: '123456', role: 'student', phone: '', class: '', school: '', qualification: '', subject: '', experience: '', status: 'active', assignedTeacher: '' }
+
+const inputCls = "w-full px-3 py-2 bg-[#0f172a] border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-sm"
+const labelCls = "block text-xs font-medium text-slate-400 mb-1"
+
+const ROLE_COLORS = {
+  admin: 'bg-purple-500/20 text-purple-300', teacher: 'bg-blue-500/20 text-blue-300',
+  student: 'bg-emerald-500/20 text-emerald-300', staff: 'bg-yellow-500/20 text-yellow-300',
+  salesman: 'bg-orange-500/20 text-orange-300', user: 'bg-slate-500/20 text-slate-300',
+}
+
+export default function AdminUsers() {
   const [users, setUsers] = useState([])
+  const [teachers, setTeachers] = useState([])
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ name:'', email:'', password:'123456', role: 'student' })
+  const [roleFilter, setRoleFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [form, setForm] = useState(EMPTY)
   const [editingUser, setEditingUser] = useState(null)
-  const [editForm, setEditForm] = useState({ name:'', email:'', password:'', role:'student' })
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selectedItem, setSelectedItem] = useState("Manage User")
-
-  const { addToast } = useToast()
-  const { user, logout } = useAuth();
-  const navigate = useNavigate()
+  const [editForm, setEditForm] = useState(EMPTY)
 
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/admin/users')
-      setUsers(res.data.users)
-    } catch (err) { console.error(err) }
+      const params = {}
+      if (roleFilter) params.role = roleFilter
+      if (search) params.search = search
+      const res = await getUsers(params)
+      const all = res.data.users || []
+      setUsers(all)
+      setTeachers(all.filter(u => u.role === 'teacher'))
+    } catch { toast.error('Failed to load users') }
     finally { setLoading(false) }
   }
 
-  useEffect(()=>{ fetchUsers() }, [])
+  useEffect(() => { fetchUsers() }, [roleFilter])
 
-  const createUser = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
-    // client-side validation
-    if (!form.name || !form.email || !form.password) {
-      addToast('error', 'Name, email and password are required')
-      return
-    }
+    if (!form.name || !form.email || !form.password) return toast.error('Name, email and password are required')
     try {
-      await api.post('/admin/users', form)
-      addToast('success', 'User created')
-      setForm({ name:'', email:'', password:'123456', role: 'student' })
-      fetchUsers()
+      await createUser(form)
+      toast.success('User created')
+      setForm(EMPTY); setShowCreate(false); fetchUsers()
     } catch (err) {
-      const data = err?.response?.data
-      const msg = data?.errors ? data.errors.map(e=>e.msg).join('\n') : (data?.message || 'Failed to create user')
-      addToast('error', msg)
+      toast.error(err?.response?.data?.message || 'Failed to create user')
     }
   }
 
-  const deleteUser = async (id) => {
-    if (!confirm('Delete user?')) return
-    try {
-      await api.delete(`/admin/users/${id}`)
-      addToast('success', 'User deleted')
-      fetchUsers()
-    } catch (err) { addToast('error', 'Delete failed') }
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this user?')) return
+    try { await deleteUser(id); toast.success('Deleted'); fetchUsers() }
+    catch { toast.error('Delete failed') }
   }
 
-  const startEdit = (user) => {
-    setEditingUser(user)
-    setEditForm({
-      name: user.name || '',
-      email: user.email || '',
-      role: user.role || 'student',
-      password: ''
-    })
+  const startEdit = (u) => {
+    setEditingUser(u)
+    setEditForm({ name: u.name || '', email: u.email || '', password: '', role: u.role || 'student', phone: u.phone || '', class: u.class || '', school: u.school || '', qualification: u.qualification || '', subject: u.subject || '', experience: u.experience ?? '', status: u.status || 'active', assignedTeacher: u.assignedTeacher?._id || '' })
   }
 
-  const cancelEdit = () => {
-    setEditingUser(null)
-    setEditForm({ name:'', email:'', password:'', role:'student' })
-  }
-
-  const updateUser = async (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault()
-    if (!editingUser) return
-
-    if (!editForm.name || !editForm.email) {
-      addToast('error', 'Name and email are required')
-      return
-    }
-
-    const payload = {
-      name: editForm.name,
-      email: editForm.email,
-      role: editForm.role
-    }
-
-    if (editForm.password) {
-      payload.password = editForm.password
-    }
-
+    const payload = { ...editForm }
+    if (!payload.password) delete payload.password
+    if (payload.experience === '') delete payload.experience
     try {
-      await api.put(`/admin/users/${editingUser._id}`, payload)
-      addToast('success', 'User updated')
-      setEditingUser(null)
-      setEditForm({ name:'', email:'', password:'', role:'student' })
-      fetchUsers()
-    } catch (err) {
-      const data = err?.response?.data
-      const msg = data?.errors ? data.errors.map(e=>e.msg).join('\n') : (data?.message || 'Failed to update user')
-      addToast('error', msg)
-    }
+      await updateUser(editingUser._id, payload)
+      toast.success('User updated'); setEditingUser(null); fetchUsers()
+    } catch (err) { toast.error(err?.response?.data?.message || 'Update failed') }
   }
 
   return (
-    <div className='min-h-screen flex flex-col relative'>
-
-<div className='w-full h-18 px-4 py-2  flex items-center top-0 sticky backdrop-blur-md justify-between dark:bg-[#0f0f0f] z-50 dark:text-white'>
-      
-      {/*Brand Logo and Name*/}
-      <div className='flex items-center gap-4'>
-        <GiHamburgerMenu size={25} className='' onClick={()=>setSidebarOpen(prev=>!prev)}/>
-      <img src={logo} alt="" className='w-12 h-12 rounded-full'/>
-      <h2 className='text-2xl font-bold hidden md:block'>Excelora - Admin Dashboard</h2>
-      </div>
-
-      {/* Profile and Logout */}
-      <div>
-          <span className="mr-4">{user?.name}</span>
-          <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={logout}>Logout</button>
+    <AdminLayout title="Manage Users">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input className="w-full pl-9 pr-3 py-2 bg-[#1e293b] border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+            placeholder="Search name or email…" value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && fetchUsers()} />
         </div>
-
-    </div>
-
-     <div>
-
-      {/*Aside Section*/}
-      <div className={`flex flex-col transition-all duration-300 border-r dark:bg-[#0f0f0f] dark:text-white fixed top-18 h-full z-40  ${sidebarOpen ? "w-60" : "w-20"} overflow-y-auto`}>
-
-{/* space-y-1 mt-3 */}
-      <nav className='space-y-1 mt-3'>
-      <SidebarItem icon={<FaHome/>} text={"Landing Page"} open={sidebarOpen} selected={selectedItem === "Landing Page"} onClick={()=>{setSelectedItem("Landing Page"); navigate("/admin")}}/>
-      <SidebarItem icon={<SiGoogleclassroom/>} text={"All Classes"} open={sidebarOpen} selected={selectedItem === "All Classes"} onClick={()=>{setSelectedItem("All Classes"); navigate("/admin/all-classes")}}/>
-      <SidebarItem icon={<FaUserCog/>} text={"Manage Users"} open={sidebarOpen} selected={selectedItem === "Manage Users"} onClick={()=>{setSelectedItem("Manage Users"); navigate("/admin/users")}}/>
-      <SidebarItem icon={<SiGoogleclassroom/>} text={"Create Classes"} open={sidebarOpen} selected={selectedItem === "Create Classes"} onClick={()=>{setSelectedItem("Create Classes"); navigate("/admin/create-class")}}/>
-      <SidebarItem icon={<RiSecurePaymentLine/>} text={"Payment Details"} open={sidebarOpen} selected={selectedItem === "Payment Details"} onClick={()=>{setSelectedItem("Payment Details"); navigate("/admin/payments")}}/>
-      <SidebarItem icon={<RiSecurePaymentLine/>} text={"Query Details"} open={sidebarOpen} selected={selectedItem === "Query Details"} onClick={()=>{setSelectedItem("Payment Details"); navigate("/admin/query-details")}}/>
-      </nav>
+        <select className="px-3 py-2 bg-[#1e293b] border border-white/10 rounded-lg text-sm text-white focus:outline-none"
+          value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+          <option value="">All Roles</option>
+          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <button onClick={fetchUsers} className="px-4 py-2 bg-[#1e293b] border border-white/10 text-sm text-slate-300 rounded-lg hover:bg-white/5">Search</button>
+        <button onClick={() => setShowCreate(p => !p)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-lg transition-colors">
+          {showCreate ? <X size={15} /> : <Plus size={15} />}
+          {showCreate ? 'Cancel' : 'Add User'}
+        </button>
       </div>
 
-
-      <div className={`px-5 py-10 ${sidebarOpen ? "md:ml-60" : "md:ml-20"}`}>
-      <h2 className="text-xl mb-4 font-bold">User Management</h2>
-      <div className="bg-white p-4 rounded shadow mb-6">
-        <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <input className="border p-2" placeholder="Full name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} />
-          <input className="border p-2" placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} />
-          <select className="border p-2" value={form.role} onChange={e=>setForm({...form,role:e.target.value})}>
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-            <option value="admin">Admin</option>
-          </select>
-          <button className="bg-green-600 text-white p-2 rounded">Create</button>
-        </form>
-      </div>
-
-      {editingUser && (
-        <div className="bg-white p-4 rounded shadow mb-6">
-          <h3 className="mb-3 font-semibold">Edit user</h3>
-          <form onSubmit={updateUser} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center">
-            <input
-              className="border p-2"
-              placeholder="Full name"
-              value={editForm.name}
-              onChange={e=>setEditForm({...editForm,name:e.target.value})}
-            />
-            <input
-              className="border p-2"
-              placeholder="Email"
-              value={editForm.email}
-              onChange={e=>setEditForm({...editForm,email:e.target.value})}
-            />
-            <select
-              className="border p-2"
-              value={editForm.role}
-              onChange={e=>setEditForm({...editForm,role:e.target.value})}
-            >
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
-            </select>
-            <input
-              className="border p-2"
-              type="password"
-              placeholder="New password (optional)"
-              value={editForm.password}
-              onChange={e=>setEditForm({...editForm,password:e.target.value})}
-            />
-            <div className="flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-3 py-2 rounded text-sm">
-                Save
-              </button>
-              <button type="button" onClick={cancelEdit} className="border px-3 py-2 rounded text-sm">
-                Cancel
-              </button>
-            </div>
+      {/* Create Form */}
+      {showCreate && (
+        <div className="bg-[#1e293b] rounded-xl border border-white/5 p-5 mb-5">
+          <h3 className="text-sm font-semibold text-white mb-4">Create New User</h3>
+          <form onSubmit={handleCreate}>
+            <UserFormFields form={form} setForm={setForm} teachers={teachers} isNew />
+            <button type="submit" className="mt-4 px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-lg">Create</button>
           </form>
         </div>
       )}
 
-      <div className="bg-white p-4 rounded shadow">
-        <h3 className="mb-2">All users</h3>
-        {loading? <div>Loading...</div> : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr>
-                <th className="px-4 py-2 text-left">Name</th>
-                <th className="px-4 py-2 text-left">Email</th>
-                <th className="px-4 py-2 text-left">Role</th>
-                <th className="px-4 py-2 text-left">Actions</th>
-                </tr></thead>
-            <tbody>
-              {users.map(u=> (
-                <tr key={u._id} className="border-t">
-                  <td className="py-2">{u.name}</td>
-                  <td>{u.email}</td>
-                  <td>{u.role}</td>
-                  <td className='px-4 py-2'>
-                    <div className='flex gap-2'>
-                    <button
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                      onClick={()=>startEdit(u)}
-                    >
-                      Edit
-                    </button>
-                    <button className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
-                     onClick={()=>deleteUser(u._id)}>Delete</button>
-                    </div>
-                  </td>
+      {/* Table */}
+      <div className="bg-[#1e293b] rounded-xl border border-white/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="p-8 text-center text-slate-500 animate-pulse">Loading users...</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5 text-xs text-slate-500 uppercase tracking-wide">
+                  <th className="px-4 py-3 text-left">Name</th>
+                  <th className="px-4 py-3 text-left">Email</th>
+                  <th className="px-4 py-3 text-left">Role</th>
+                  <th className="px-4 py-3 text-left">Phone</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Details</th>
+                  <th className="px-4 py-3 text-left">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {users.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">No users found</td></tr>
+                ) : users.map(u => (
+                  <tr key={u._id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-3 font-medium text-white">{u.name}</td>
+                    <td className="px-4 py-3 text-slate-400">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[u.role] || 'bg-slate-500/20 text-slate-300'}`}>{u.role}</span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">{u.phone || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${u.status === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>{u.status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500">
+                      {(u.role === 'student' || u.role === 'user') && `Class ${u.class || '—'}`}
+                      {(u.role === 'teacher' || u.role === 'staff') && `${u.subject || '—'} · ${u.experience ? u.experience + 'y' : '—'}`}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(u)} className="px-3 py-1 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 rounded text-xs transition-colors">Edit</button>
+                        <button onClick={() => handleDelete(u._id)} className="px-3 py-1 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded text-xs transition-colors">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
-    </div>
-     </div>
 
-    </div>
+      {/* Edit Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setEditingUser(null)}>
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base font-bold text-white">Edit — {editingUser.name}</h3>
+                <button onClick={() => setEditingUser(null)} className="text-slate-500 hover:text-white"><X size={18} /></button>
+              </div>
+              <form onSubmit={handleUpdate}>
+                <UserFormFields form={editForm} setForm={setEditForm} teachers={teachers} />
+                <div className="flex gap-3 mt-5">
+                  <button type="submit" className="px-5 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-lg">Save</button>
+                  <button type="button" onClick={() => setEditingUser(null)} className="px-5 py-2 border border-white/10 text-slate-400 hover:text-white text-sm rounded-lg">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
   )
 }
 
-
-function SidebarItem({icon, text, open, selected, onClick}){
-  return(
-    <button className={`flex items-center gap-4 p-2 rounded w-full transition-colors 
-    ${open ? "justify-start" : "justify-center"} ${selected ? "bg-[#272727] text-white" : "hover:bg-[#272727]"} hover:text-white`} onClick={onClick}> 
-    <span className='text-lg'>{icon}</span>
-    {open && <span className='text-sm '>{text}</span>}
-    </button>
+function UserFormFields({ form, setForm, teachers, isNew = false }) {
+  const set = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
+  const isStudent = form.role === 'student' || form.role === 'user'
+  const isTeacher = form.role === 'teacher' || form.role === 'staff'
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div><label className={labelCls}>Name *</label><input name="name" className={inputCls} value={form.name} onChange={set} placeholder="Full name" /></div>
+      <div><label className={labelCls}>Email *</label><input name="email" className={inputCls} value={form.email} onChange={set} placeholder="Email" /></div>
+      <div><label className={labelCls}>{isNew ? 'Password *' : 'New Password (blank = keep)'}</label><input name="password" type="password" className={inputCls} value={form.password} onChange={set} /></div>
+      <div><label className={labelCls}>Phone</label><input name="phone" className={inputCls} value={form.phone} onChange={set} placeholder="Phone" /></div>
+      <div>
+        <label className={labelCls}>Role</label>
+        <select name="role" className={inputCls} value={form.role} onChange={set}>
+          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>Status</label>
+        <select name="status" className={inputCls} value={form.status} onChange={set}>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      {isStudent && <>
+        <div><label className={labelCls}>Class</label><input name="class" className={inputCls} value={form.class} onChange={set} placeholder="e.g. 10" /></div>
+        <div><label className={labelCls}>School</label><input name="school" className={inputCls} value={form.school} onChange={set} /></div>
+        <div className="md:col-span-2">
+          <label className={labelCls}>Assigned Teacher</label>
+          <select name="assignedTeacher" className={inputCls} value={form.assignedTeacher} onChange={set}>
+            <option value="">None</option>
+            {teachers.map(t => <option key={t._id} value={t._id}>{t.name}{t.subject ? ` (${t.subject})` : ''}</option>)}
+          </select>
+        </div>
+      </>}
+      {isTeacher && <>
+        <div><label className={labelCls}>Subject</label><input name="subject" className={inputCls} value={form.subject} onChange={set} /></div>
+        <div><label className={labelCls}>Qualification</label><input name="qualification" className={inputCls} value={form.qualification} onChange={set} /></div>
+        <div><label className={labelCls}>Experience (years)</label><input name="experience" type="number" className={inputCls} value={form.experience} onChange={set} /></div>
+      </>}
+    </div>
   )
 }

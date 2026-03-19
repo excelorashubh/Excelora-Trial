@@ -1,87 +1,64 @@
-import React, { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import React, { useEffect, useState } from 'react'
+import AdminLayout from '../components/AdminLayout'
 import ClassList from '../components/ClassList'
-import { FaBars } from "react-icons/fa";
-import logo from '../assets/logo.jpg'
-import { IoMdSearch } from "react-icons/io";
-import { IoMic } from "react-icons/io5";
-import { FaUserCircle, FaHome, FaUserCog } from "react-icons/fa";
-import { GiHamburgerMenu } from "react-icons/gi";
-import { useNavigate } from 'react-router-dom';
-import { RiSecurePaymentLine } from "react-icons/ri";
-import { SiGoogleclassroom } from "react-icons/si";
-// import { FaUserCog } from "react-icons/fa";
+import { getUsers } from '../services/userService'
+import { getClasses } from '../services/classService'
+import { getPayments } from '../services/paymentService'
+import { Users, GraduationCap, CreditCard, BookOpen } from 'lucide-react'
 
+export default function AdminDashboard() {
+  const [stats, setStats] = useState({ students: 0, teachers: 0, classes: 0, payments: 0 })
 
-export default function AdminDashboard(){
-  const navigate = useNavigate()
-  const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selectedItem, setSelectedItem] = useState("Landing Page")
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [usersRes, classesRes, paymentsRes] = await Promise.all([
+          getUsers({ limit: 100 }),
+          getClasses(),
+          getPayments(),
+        ])
+        const users = usersRes.data.users || []
+        setStats({
+          students: users.filter(u => u.role === 'student').length,
+          teachers: users.filter(u => u.role === 'teacher').length,
+          classes: (classesRes.data || []).length,
+          payments: (paymentsRes.data || []).filter(p => p.status === 'paid').length,
+        })
+      } catch { /* silent */ }
+    }
+    load()
+  }, [])
 
   return (
-    <div className="min-h-screen flex flex-col  relative ">
-
-     {/*Header Section */}
-    <div className='w-full h-18 px-4 py-2 flex items-center top-0 sticky backdrop-blur-md justify-between dark:bg-[#0f0f0f] z-50 dark:text-white'>
-      
-      {/*Brand Logo and Name*/}
-      <div className='flex items-center gap-4'>
-        <GiHamburgerMenu size={25} className='' onClick={()=>setSidebarOpen(prev=>!prev)}/>
-      <img src={logo} alt="" className='w-12 h-12 rounded-full'/>
-      <h2 className='text-2xl font-bold hidden md:block'>Excelora - Admin Dashboard</h2>
+    <AdminLayout title="Dashboard">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard icon={<Users size={22} />} label="Students" value={stats.students} color="blue" />
+        <StatCard icon={<GraduationCap size={22} />} label="Teachers" value={stats.teachers} color="purple" />
+        <StatCard icon={<BookOpen size={22} />} label="Classes" value={stats.classes} color="emerald" />
+        <StatCard icon={<CreditCard size={22} />} label="Paid This Month" value={stats.payments} color="amber" />
       </div>
 
-      {/* Profile and Logout */}
+      {/* Today's Classes */}
+      <ClassList todayOnly title="Today's Classes" />
+    </AdminLayout>
+  )
+}
+
+function StatCard({ icon, label, value, color }) {
+  const colors = {
+    blue:    'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    purple:  'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    amber:   'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  }
+  return (
+    <div className={`rounded-xl border p-4 flex items-center gap-4 ${colors[color]}`}>
+      <div className="p-2 rounded-lg bg-white/5">{icon}</div>
       <div>
-          <span className="mr-4">{user?.name}</span>
-          <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={logout}>Logout</button>
-        </div>
-
-    </div>
-      
-
-    {/*Body section*/}
-    <div className='flex '>
-
-      {/*Aside Section*/}
-      <div className={`flex flex-col transition-all duration-300 border-r dark:bg-[#0f0f0f] dark:text-white fixed top-18 h-full z-40  ${sidebarOpen ? "w-60" : "w-20"} overflow-y-auto`}>
-
-{/* space-y-1 mt-3 */}
-      <nav className='space-y-1 mt-3'>
-      <SidebarItem icon={<FaHome/>} text={"Landing Page"} open={sidebarOpen} selected={selectedItem === "Landing Page"} onClick={()=>{setSelectedItem("Landing Page"); navigate("/admin")}}/>
-      <SidebarItem icon={<SiGoogleclassroom/>} text={"All Classes"} open={sidebarOpen} selected={selectedItem === "All Classes"} onClick={()=>{setSelectedItem("All Classes"); navigate("/admin/all-classes")}}/>
-      <SidebarItem icon={<FaUserCog/>} text={"Manage Users"} open={sidebarOpen} selected={selectedItem === "Manage Users"} onClick={()=>{setSelectedItem("Manage Users"); navigate("/admin/users")}}/>
-      <SidebarItem icon={<SiGoogleclassroom/>} text={"Create Classes"} open={sidebarOpen} selected={selectedItem === "Create Classes"} onClick={()=>{setSelectedItem("Create Classes"); navigate("/admin/create-class")}}/>
-      <SidebarItem icon={<RiSecurePaymentLine/>} text={"Payment Details"} open={sidebarOpen} selected={selectedItem === "Payment Details"} onClick={()=>{setSelectedItem("Payment Details"); navigate("/admin/payments")}}/>
-      <SidebarItem icon={<RiSecurePaymentLine/>} text={"Query Details"} open={sidebarOpen} selected={selectedItem === "Query Details"} onClick={()=>{setSelectedItem("Payment Details"); navigate("/admin/query-details")}}/>
-      </nav>
+        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-xs text-slate-400">{label}</p>
       </div>
-
-
-            {/* Main Content Section */}
-
-            <div className={`w-full px-5 py-10 flex flex-col ${sidebarOpen ? "md:ml-60" : "md:ml-20"}`}>
-
-      <div className="grid grid-cols-1 gap-4">
-        <ClassList todayOnly title="Today's Classes" />
-        {/* <ClassList title="All Classes" /> */}
-      </div>
-      </div>
-    </div>
-
     </div>
   )
 }
-
-function SidebarItem({icon, text, open, selected, onClick}){
-  return(
-    <button className={`flex items-center gap-4 p-2 rounded w-full transition-colors 
-    ${open ? "justify-start" : "justify-center"} ${selected ? "bg-[#272727] text-white" : "hover:bg-[#272727] hover:text-white"}`} onClick={onClick}> 
-    <span className='text-lg'>{icon}</span>
-    {open && <span className='text-sm '>{text}</span>}
-    </button>
-  )
-}
-
-

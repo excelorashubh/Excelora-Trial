@@ -73,19 +73,15 @@ exports.getClasses = async (req, res, next) => {
   try {
     const { role, id } = req.user;
     let query = {};
-    if (role === 'admin') {
-      // Admins see all classes
-      query = {};
-    } else if (role === 'teacher') {
-      // Teachers see classes they teach
+    if (role === 'teacher') {
       query = { teacher: id };
     } else if (role === 'student') {
-      // Students see classes they're enrolled in
       query = { students: id };
     }
+    // admin, staff, salesman see all classes
     const list = await Class.find(query)
-      .populate('teacher', 'name email')
-      .populate('students', 'name email')
+      .populate('teacher', 'name email subject')
+      .populate('students', 'name email class')
       .populate('attendance.present', 'name email');
     res.json(list);
   } catch (err) { next(err); }
